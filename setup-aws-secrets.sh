@@ -9,9 +9,12 @@ AWS_REGION="${2:-us-east-1}"
 
 echo "Creating AWS Secrets Manager secret: $SECRET_NAME in region: $AWS_REGION"
 
-# Read the current values (you can also pass these as environment variables)
-ELASTIC_ENDPOINT="${ELASTIC_ENDPOINT:-https://a5630c65c43f4f299288c392af0c2f45.ingest.us-east-1.aws.elastic.cloud:443}"
-ELASTIC_API_KEY="${ELASTIC_API_KEY:-ZGtVU1pKb0JIN2dNc1pZZE9TRHg6OWwzczNyT1ZMbjR0bkIwY09SY2MwQQ==}"
+# Read the current values from environment variables (required)
+if [ -z "$ELASTIC_ENDPOINT" ] || [ -z "$ELASTIC_API_KEY" ]; then
+    echo "Error: ELASTIC_ENDPOINT and ELASTIC_API_KEY environment variables are required"
+    echo "Usage: ELASTIC_ENDPOINT=<endpoint> ELASTIC_API_KEY=<key> ./setup-aws-secrets.sh [secret-name] [region]"
+    exit 1
+fi
 
 # Create JSON secret value
 SECRET_VALUE=$(cat <<EOF
