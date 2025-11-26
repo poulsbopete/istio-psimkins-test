@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: default
+  annotations:
+    # For EKS clusters: Replace with your IAM role ARN that has permissions to access AWS Secrets Manager
+    # Example: eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/otel-collector-secrets-role
+    # For non-EKS clusters: Remove this annotation and create aws-credentials secret instead
+    # eks.amazonaws.com/role-arn: "REPLACE_WITH_YOUR_IAM_ROLE_ARN"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["replicasets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector
+roleRef:
+  kind: ClusterRole
+  name: otel-collector
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: otel-collector
+  namespace: default

@@ -1,0 +1,89 @@
+# Sensitive information
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*-secret.yaml
+*-secrets.yaml
+*credentials.yaml
+*password*.yaml
+*token*.yaml
+*.env
+.env
+.env.local
+.env.*.local
+
+# AWS credentials (actual credential files, not setup scripts)
+.aws/
+aws-credentials.yaml
+aws-secrets.yaml
+aws-credentials-*.yaml
+aws-secrets-*.yaml
+!setup-aws-secrets.sh
+!create-aws-credentials-secret.sh
+
+# Kubernetes secrets
+*-secret.yaml
+*secrets*.yaml
+!otel-rbac.yaml
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Trust policy files (may contain account IDs)
+trust-policy*.json
+/tmp/
+
+# Local configuration overrides
+local-*.yaml
+override-*.yaml
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+

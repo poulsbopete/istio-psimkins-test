@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: default
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          http: {}
+          grpc: {}
+
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'istio-gateways'
+              static_configs:
+                - targets:
+                    - "10.244.0.34:15090"   # istio-ingressgateway
+                    - "10.244.0.38:15090"   # istio-egressgateway
+              metrics_path: /stats/prometheus
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 450
+        spike_limit_mib: 128
+
+      k8sattributes:
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.deployment.name
+            - k8s.node.name
+
+      batch:
+        send_batch_size: 1024
+        timeout: 200ms
+
+    exporters:
+      otlphttp/elastic:
+        endpoint: "${ELASTIC_ENDPOINT}"
+        headers:
+          Authorization: "ApiKey ${ELASTIC_API_KEY}"
+        compression: gzip
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [otlphttp/elastic]
+
+        metrics:
+          receivers: [prometheus]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [otlphttp/elastic]
+
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [otlphttp/elastic]

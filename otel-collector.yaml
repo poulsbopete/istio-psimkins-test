@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: default
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      hostNetwork: true
+      serviceAccountName: otel-collector
+      initContainers:
+        - name: fetch-secrets
+          image: amazon/aws-cli:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              SECRET_NAME="${AWS_SECRET_NAME:-istio/otel-collector/elastic}"
+              AWS_REGION="${AWS_REGION:-us-east-1}"
+              
+              echo "Fetching secret from AWS Secrets Manager: $SECRET_NAME"
+              
+              # Fetch secret from AWS Secrets Manager
+              SECRET_JSON=$(aws secretsmanager get-secret-value \
+                --secret-id "$SECRET_NAME" \
+                --region "$AWS_REGION" \
+                --query SecretString \
+                --output text)
+              
+              # Parse JSON using jq (if available) or grep/sed
+              if command -v jq &> /dev/null; then
+                ELASTIC_ENDPOINT=$(echo "$SECRET_JSON" | jq -r '.endpoint')
+                ELASTIC_API_KEY=$(echo "$SECRET_JSON" | jq -r '.apiKey')
+              else
+                # Fallback to grep/sed if jq is not available
+                ELASTIC_ENDPOINT=$(echo "$SECRET_JSON" | sed -n 's/.*"endpoint":"\([^"]*\)".*/\1/p')
+                ELASTIC_API_KEY=$(echo "$SECRET_JSON" | sed -n 's/.*"apiKey":"\([^"]*\)".*/\1/p')
+              fi
+              
+              # Write to shared volume as files (will be read as env vars)
+              echo "$ELASTIC_ENDPOINT" > /secrets/ELASTIC_ENDPOINT
+              echo "$ELASTIC_API_KEY" > /secrets/ELASTIC_API_KEY
+              
+              echo "Secrets fetched and written successfully"
+              chmod 644 /secrets/ELASTIC_ENDPOINT /secrets/ELASTIC_API_KEY
+          env:
+            - name: AWS_SECRET_NAME
+              value: "istio/otel-collector/elastic"
+            - name: AWS_REGION
+              value: "us-east-1"
+            # AWS credentials from secret (for non-EKS clusters)
+            # These are optional - if using IRSA or instance profiles, these will be ignored
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws-access-key-id
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws-secret-access-key
+                  optional: true
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws-session-token
+                  optional: true
+          volumeMounts:
+            - name: secrets
+              mountPath: /secrets
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.100.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Source environment variables from secrets volume
+              if [ -f /secrets/ELASTIC_ENDPOINT ]; then
+                export ELASTIC_ENDPOINT=$(cat /secrets/ELASTIC_ENDPOINT)
+              fi
+              if [ -f /secrets/ELASTIC_API_KEY ]; then
+                export ELASTIC_API_KEY=$(cat /secrets/ELASTIC_API_KEY)
+              fi
+              # Start the collector
+              exec /otelcol --config=/conf/config.yaml
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 8888
+              name: metrics
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+        - name: secrets
+          emptyDir: {}
