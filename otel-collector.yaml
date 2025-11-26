@@ -24,6 +24,11 @@ spec:
             - -c
             - |
               set -e
+              # Install kubectl
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              mv kubectl /usr/local/bin/kubectl || mv kubectl /bin/kubectl
+              
               SECRET_NAME="${AWS_SECRET_NAME:-istio/otel-collector/elastic}"
               AWS_REGION="${AWS_REGION:-us-east-1}"
               
@@ -36,19 +41,30 @@ spec:
                 --query SecretString \
                 --output text)
               
-              # Parse JSON using jq (if available) or grep/sed
+              # Parse JSON - try jq first, then fallback to sed
               if command -v jq &> /dev/null; then
                 ELASTIC_ENDPOINT=$(echo "$SECRET_JSON" | jq -r '.endpoint')
                 ELASTIC_API_KEY=$(echo "$SECRET_JSON" | jq -r '.apiKey')
               else
-                # Fallback to grep/sed if jq is not available
+                # Fallback to sed if jq is not available
                 ELASTIC_ENDPOINT=$(echo "$SECRET_JSON" | sed -n 's/.*"endpoint":"\([^"]*\)".*/\1/p')
                 ELASTIC_API_KEY=$(echo "$SECRET_JSON" | sed -n 's/.*"apiKey":"\([^"]*\)".*/\1/p')
               fi
               
-              # Write to shared volume as files (will be read as env vars)
+              # Write to shared volume as files
               echo "$ELASTIC_ENDPOINT" > /secrets/ELASTIC_ENDPOINT
               echo "$ELASTIC_API_KEY" > /secrets/ELASTIC_API_KEY
+              
+              # Create or update ConfigMap with the secrets
+              # This allows the distroless collector image to access them as env vars
+              kubectl create configmap otel-collector-env \
+                --from-literal=ELASTIC_ENDPOINT="$ELASTIC_ENDPOINT" \
+                --from-literal=ELASTIC_API_KEY="$ELASTIC_API_KEY" \
+                --dry-run=client -o yaml | kubectl apply -f - || \
+              kubectl patch configmap otel-collector-env -p "{\"data\":{\"ELASTIC_ENDPOINT\":\"$ELASTIC_ENDPOINT\",\"ELASTIC_API_KEY\":\"$ELASTIC_API_KEY\"}}" || \
+              kubectl create configmap otel-collector-env \
+                --from-literal=ELASTIC_ENDPOINT="$ELASTIC_ENDPOINT" \
+                --from-literal=ELASTIC_API_KEY="$ELASTIC_API_KEY"
               
               echo "Secrets fetched and written successfully"
               chmod 644 /secrets/ELASTIC_ENDPOINT /secrets/ELASTIC_API_KEY
@@ -83,19 +99,21 @@ spec:
       containers:
         - name: otel-collector
           image: otel/opentelemetry-collector-contrib:0.100.0
-          command:
-            - /bin/sh
-            - -c
-            - |
-              # Source environment variables from secrets volume
-              if [ -f /secrets/ELASTIC_ENDPOINT ]; then
-                export ELASTIC_ENDPOINT=$(cat /secrets/ELASTIC_ENDPOINT)
-              fi
-              if [ -f /secrets/ELASTIC_API_KEY ]; then
-                export ELASTIC_API_KEY=$(cat /secrets/ELASTIC_API_KEY)
-              fi
-              # Start the collector
-              exec /otelcol --config=/conf/config.yaml
+          args:
+            - --config=/conf/config.yaml
+          env:
+            - name: ELASTIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-collector-env
+                  key: ELASTIC_ENDPOINT
+                  optional: true
+            - name: ELASTIC_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-collector-env
+                  key: ELASTIC_API_KEY
+                  optional: true
           ports:
             - containerPort: 4317
               name: otlp-grpc

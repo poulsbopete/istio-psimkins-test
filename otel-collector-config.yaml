@@ -17,9 +17,9 @@ data:
             - job_name: 'istio-gateways'
               static_configs:
                 - targets:
-                    - "10.244.0.34:15090"   # istio-ingressgateway
-                    - "10.244.0.38:15090"   # istio-egressgateway
+                    - "192.168.23.0:15090"
               metrics_path: /stats/prometheus
+              scrape_interval: 15s
 
     processors:
       memory_limiter:
@@ -45,6 +45,8 @@ data:
         headers:
           Authorization: "ApiKey ${ELASTIC_API_KEY}"
         compression: gzip
+        # For Elastic ingest endpoint, OTLP paths are automatically handled
+        # Metrics: /v1/metrics, Traces: /v1/traces, Logs: /v1/logs
 
     service:
       pipelines:
