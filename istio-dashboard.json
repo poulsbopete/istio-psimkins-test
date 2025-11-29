@@ -1,0 +1,32 @@
+{
+  "version": "WzgsMV0=",
+  "objects": [
+    {
+      "id": "istio-gateway-metrics-dashboard",
+      "type": "dashboard",
+      "updated_at": "2025-11-26T18:00:00.000Z",
+      "version": "WzgsMV0=",
+      "attributes": {
+        "title": "Istio Gateway Metrics Dashboard",
+        "description": "Comprehensive dashboard for Istio Gateway Prometheus metrics from OpenTelemetry Collector",
+        "version": 1,
+        "panelsJSON": "[{\"version\":\"8.0.0\",\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15,\"i\":\"1\"},\"panelIndex\":\"1\",\"embeddableConfig\":{\"savedObjectId\":\"istio-request-rate\"},\"title\":\"Request Rate\",\"id\":\"1\"},{\"version\":\"8.0.0\",\"gridData\":{\"x\":24,\"y\":0,\"w\":24,\"h\":15,\"i\":\"2\"},\"panelIndex\":\"2\",\"embeddableConfig\":{\"savedObjectId\":\"istio-error-rate\"},\"title\":\"Error Rate\",\"id\":\"2\"},{\"version\":\"8.0.0\",\"gridData\":{\"x\":0,\"y\":15,\"w\":24,\"h\":15,\"i\":\"3\"},\"panelIndex\":\"3\",\"embeddableConfig\":{\"savedObjectId\":\"istio-active-connections\"},\"title\":\"Active Connections\",\"id\":\"3\"},{\"version\":\"8.0.0\",\"gridData\":{\"x\":24,\"y\":15,\"w\":24,\"h\":15,\"i\":\"4\"},\"panelIndex\":\"4\",\"embeddableConfig\":{\"savedObjectId\":\"istio-cluster-health\"},\"title\":\"Cluster Health\",\"id\":\"4\"}]",
+        "optionsJSON": "{\"darkTheme\":false,\"useMargins\":true,\"syncColors\":false,\"hidePanelTitles\":false}",
+        "timeRestore": true,
+        "timeTo": "now",
+        "timeFrom": "now-1h",
+        "refreshInterval": {
+          "pause": false,
+          "value": 30000
+        },
+        "controlGroupInput": {
+          "controlStyle": "oneLine",
+          "chainingSystem": "HIERARCHICAL",
+          "panelsJSON": "[]"
+        }
+      },
+      "references": []
+    }
+  ]
+}
+

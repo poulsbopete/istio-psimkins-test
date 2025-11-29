@@ -1,0 +1,57 @@
+name: Generate Istio Traffic (Simple)
+description: |
+  Simple workflow to generate HTTP traffic to Istio ingress gateway.
+  Makes 5 requests per execution every minute to populate dashboards.
+
+triggers:
+  - type: scheduled
+    with:
+      every: "1m"  # Every minute
+  - type: manual
+
+steps:
+  - name: request-home
+    type: http
+    with:
+      url: 'http://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/'
+      method: GET
+      headers:
+        User-Agent: 'Traffic-Generator/1.0'
+      timeout: "10"
+
+  - name: request-products
+    type: http
+    with:
+      url: 'http://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/products'
+      method: GET
+      headers:
+        User-Agent: 'Traffic-Generator/1.0'
+      timeout: "10"
+
+  - name: request-cart
+    type: http
+    with:
+      url: 'http://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/cart'
+      method: GET
+      headers:
+        User-Agent: 'Traffic-Generator/1.0'
+      timeout: "10"
+
+  - name: request-recommendations
+    type: http
+    with:
+      url: 'http://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/recommendations'
+      method: GET
+      headers:
+        User-Agent: 'Traffic-Generator/1.0'
+      timeout: "10"
+
+  - name: request-currency
+    type: http
+    with:
+      url: 'http://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/currencies'
+      method: GET
+      headers:
+        User-Agent: 'Traffic-Generator/1.0'
+      timeout: "10"
+

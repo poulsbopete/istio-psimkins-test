@@ -1,0 +1,157 @@
+name: Generate Istio Traffic
+description: |
+  Generates HTTP traffic to Istio ingress gateway to populate dashboards with metrics.
+  This workflow makes periodic HTTP requests to the gateway, which will be tracked
+  by Prometheus and visible in the Istio dashboards.
+
+  Configuration:
+  - ISTIO_GATEWAY_URL: The Istio ingress gateway endpoint (default: from AWS ELB)
+  - REQUEST_INTERVAL: How often to make requests (default: 30 seconds)
+  - REQUEST_COUNT: Number of requests per execution (default: 10)
+
+triggers:
+  - type: scheduled
+    with:
+      every: "30s"  # Every 30 seconds
+  - type: manual
+
+steps:
+  - name: get-gateway-endpoint
+    type: http
+    with:
+      # Get the gateway endpoint from Kubernetes API or use default
+      # For now, using the discovered ELB endpoint
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      # Don't fail if gateway returns 404 - we just want to generate metrics
+      ignore_errors: true
+
+  - name: generate-traffic-batch-1
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/healthz'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-2
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-3
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/v1/test'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-4
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/v1/status'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-5
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com'
+      method: POST
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+        Content-Type: 'application/json'
+      body: '{"test": "data", "timestamp": "{{ now }}"}'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-6
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/v1/metrics'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-7
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/api/v1/health'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-8
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/test'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-9
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com/status'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: generate-traffic-batch-10
+    type: http
+    with:
+      url: 'https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com'
+      method: GET
+      headers:
+        Host: istio-gateway.local
+        User-Agent: 'One-Workflow-Traffic-Generator/1.0'
+        X-Request-ID: '{{ uuid }}'
+      timeout: "5"
+      ignore_errors: true
+
+  - name: log-traffic-summary
+    type: script
+    with:
+      script: |
+        echo "✅ Traffic generation complete"
+        echo "Generated 10+ HTTP requests to Istio ingress gateway"
+        echo "Gateway: a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com"
+        echo "Time: $(date)"
+        echo ""
+        echo "These requests will appear in Prometheus metrics and your Istio dashboards"
+        echo "Check your dashboard in 1-2 minutes to see the data"
+

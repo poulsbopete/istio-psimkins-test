@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: elastic-profiling-agent
+  namespace: default
+  labels:
+    app: elastic-profiling-agent
+spec:
+  selector:
+    matchLabels:
+      app: elastic-profiling-agent
+  template:
+    metadata:
+      labels:
+        app: elastic-profiling-agent
+    spec:
+      hostNetwork: true
+      serviceAccountName: elastic-profiling-agent
+      # eBPF requires privileged access or specific capabilities
+      # The profiling agent needs to attach to kernel functions
+      # Note: We use the existing otel-collector-env ConfigMap created by OpenTelemetry Collector
+      # This avoids needing separate IAM permissions for the profiling agent
+      containers:
+        - name: profiling-agent
+          # Elastic Universal Profiling is typically enabled through Elastic Agent
+          # For a standalone deployment, you may need to:
+          # 1. Use Elastic Agent with profiling enabled (docker.elastic.co/beats/elastic-agent:latest)
+          # 2. Use the OpenTelemetry profiling agent (if available)
+          # 3. Configure through Elastic Cloud's agent management
+          # 
+          # For now, using a placeholder. Update this with the correct image for your deployment.
+          # Check: https://www.elastic.co/guide/en/observability/current/universal-profiling.html
+          image: docker.elastic.co/beats/elastic-agent:8.15.0
+          env:
+            - name: ELASTIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-collector-env
+                  key: ELASTIC_ENDPOINT
+                  optional: true
+            - name: ELASTIC_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-collector-env
+                  key: ELASTIC_API_KEY
+                  optional: true
+            # Profiling agent configuration
+            - name: PROJECT_ID
+              value: "1"  # Default project ID, adjust if needed
+            - name: COLLECTOR_HOST
+              value: ""  # Leave empty to use ELASTIC_ENDPOINT
+            - name: COLLECTOR_PORT
+              value: "443"
+            - name: COLLECTOR_TLS
+              value: "true"
+            # Optional: Configure which processes to profile
+            - name: PROFILING_LOG_LEVEL
+              value: "info"
+            # Enable profiling for all processes (including Istio proxies)
+            - name: PROFILING_ENABLED
+              value: "true"
+          # eBPF requires privileged access to attach to kernel functions
+          securityContext:
+            privileged: true
+            # Alternative: Use specific capabilities instead of privileged
+            # capabilities:
+            #   add:
+            #     - SYS_ADMIN
+            #     - SYS_RESOURCE
+            #     - NET_ADMIN
+            #     - BPF
+            #     - PERFMON
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            # Mount host filesystem to access process information
+            - name: host-proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: host-sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: host-boot
+              mountPath: /host/boot
+              readOnly: true
+            - name: host-usr
+              mountPath: /host/usr
+              readOnly: true
+            - name: host-etc
+              mountPath: /host/etc
+              readOnly: true
+            - name: host-var-lib
+              mountPath: /host/var/lib
+              readOnly: true
+      volumes:
+        - name: host-proc
+          hostPath:
+            path: /proc
+        - name: host-sys
+          hostPath:
+            path: /sys
+        - name: host-boot
+          hostPath:
+            path: /boot
+        - name: host-usr
+          hostPath:
+            path: /usr
+        - name: host-etc
+          hostPath:
+            path: /etc
+        - name: host-var-lib
+          hostPath:
+            path: /var/lib
+

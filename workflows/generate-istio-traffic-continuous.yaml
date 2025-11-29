@@ -1,0 +1,71 @@
+name: Generate Istio Traffic (Continuous)
+description: |
+  Generates continuous HTTP traffic to Istio ingress gateway.
+  This version runs a loop to generate more traffic per execution.
+  
+  This workflow makes multiple HTTP requests in a loop to generate
+  sustained traffic that will populate your Istio dashboards.
+
+triggers:
+  - type: scheduled
+    with:
+      every: "1m"  # Every minute
+  - type: manual
+
+steps:
+  - name: generate-traffic-loop
+    type: script
+    with:
+      script: |
+        #!/bin/bash
+        set -e
+        
+        GATEWAY_URL="https://a34e57a1901f042e8a7cf2383a4beeec-1559479130.us-east-1.elb.amazonaws.com"
+        REQUEST_COUNT=20  # Number of requests per execution
+        DELAY=2  # Delay between requests (seconds)
+        
+        echo "🚀 Starting traffic generation to Istio gateway"
+        echo "Gateway: $GATEWAY_URL"
+        echo "Requests: $REQUEST_COUNT"
+        echo "Delay: ${DELAY}s between requests"
+        echo ""
+        
+        for i in $(seq 1 $REQUEST_COUNT); do
+          # Generate different types of requests
+          case $((i % 4)) in
+            0)
+              PATH="/healthz"
+              METHOD="GET"
+              ;;
+            1)
+              PATH="/api/v1/status"
+              METHOD="GET"
+              ;;
+            2)
+              PATH="/test"
+              METHOD="GET"
+              ;;
+            3)
+              PATH="/"
+              METHOD="POST"
+              ;;
+          esac
+          
+          echo "[$i/$REQUEST_COUNT] $METHOD $PATH"
+          
+          # Make the request (ignore errors - we just want metrics)
+          curl -s -X "$METHOD" \
+            -H "Host: istio-gateway.local" \
+            -H "User-Agent: One-Workflow-Traffic-Generator/1.0" \
+            -H "X-Request-ID: $(uuidgen 2>/dev/null || echo $RANDOM)" \
+            -m 5 \
+            "$GATEWAY_URL$PATH" > /dev/null 2>&1 || true
+          
+          # Small delay between requests
+          sleep $DELAY
+        done
+        
+        echo ""
+        echo "✅ Generated $REQUEST_COUNT requests"
+        echo "📊 Check your Istio dashboard in 1-2 minutes to see the metrics"
+
