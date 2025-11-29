@@ -81,7 +81,7 @@ data:
           exporters: [otlphttp/elastic]
 
         metrics:
-          receivers: [prometheus]
+          receivers: [otlp, prometheus]
           processors: [memory_limiter, k8sattributes, transform, batch]
           exporters: [otlphttp/elastic]
 
